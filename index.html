@@ -61,8 +61,17 @@
   const overlay = document.getElementById('overlay');
 
   audio.volume = 1;
-  audio.src = 'petal.mp3';
   audio.loop = true;                       // 单曲循环
+  audio.src = 'petal.mp3';                 // 兜底直连
+
+  // 预加载：页面一打开就后台下载音频到内存，点击时立即播放
+  fetch('petal.mp3')
+    .then(function(r){ return r.blob(); })
+    .then(function(blob){
+      audio.src = URL.createObjectURL(blob);
+      audio.load();
+    })
+    .catch(function(){ /* 下载失败则继续用上面的直连 URL */ });
 
   function play(){
     const p = audio.play();
