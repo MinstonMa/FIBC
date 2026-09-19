@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>相册</title>
+<title>哈三中商业精英社</title>
 <style>
   *{ box-sizing:border-box; }
   html, body{
@@ -38,11 +38,37 @@
       rgba(0,0,0,0) 62%,
       rgba(0,0,0,.28) 100%);
   }
+
+  /* 点击进入引导层：浏览器禁止无交互自动播放，需用户点一下开始 */
+  #overlay{
+    position:fixed; inset:0; z-index:10;
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    gap:16px;
+    background:rgba(13,11,9,.72);
+    backdrop-filter:blur(4px);
+    color:#e8e2d6;
+    font-family:system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    cursor:pointer;
+    user-select:none;
+    transition:opacity 1s ease;
+  }
+  #overlay.hidden{ opacity:0; pointer-events:none; }
+  #overlay h1{
+    margin:0; font-size:30px; font-weight:600; letter-spacing:3px;
+  }
+  #overlay p{
+    margin:0; font-size:14px; letter-spacing:2px; opacity:.68;
+  }
 </style>
 </head>
 <body>
 
 <div class="stage" id="stage"></div>
+<div id="overlay">
+  <h1>哈三中商业精英社</h1>
+  <p>点击进入 · 播放音乐</p>
+</div>
 <audio id="audio" preload="auto"></audio>
 
 <script>
@@ -120,6 +146,11 @@
     audio.muted = false;
     playTrack(0);
 
+    const overlay = document.getElementById('overlay');
+
+    /* 若浏览器允许自动播放，音频一开始播放就自动收起引导层 */
+    audio.addEventListener('playing', () => overlay.classList.add('hidden'));
+
     /* 音频加载完成后若尚未播放，再尝试一次自动播放 */
     audio.addEventListener('canplay', () => {
       if (audio.paused) ensurePlay();
@@ -128,10 +159,10 @@
     audio.addEventListener('ended', next);
 
     /* 浏览器普遍拦截无手势的自动播放：
-       页面加载先尝试一次；若被拦截，则在用户第一次
-       点击 / 触摸 / 按键 / 敲键盘时自动开始，全程不显示任何按钮。 */
+       显示引导层，用户在第一次点击 / 触摸 / 按键时开始播放并收起引导层。 */
     const events = ['pointerdown', 'touchstart', 'keydown', 'click'];
     function onGesture(){
+      overlay.classList.add('hidden');
       if (audio.paused) ensurePlay();
       events.forEach((ev) => document.removeEventListener(ev, onGesture));
     }
