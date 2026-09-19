@@ -8,20 +8,25 @@
   *{ box-sizing:border-box; }
   html, body{ margin:0; padding:0; height:100%; overflow:hidden; background:#0d0b09; }
 
-  /* 全屏背景图：初始高度模糊，点击后过渡到清晰 */
-  #bg{
+  /* 底层：始终高度模糊、铺满全屏（作为背景墙，不留黑边） */
+  #bg-blur{
     position:fixed; inset:0;
     width:100%; height:100%;
-    object-fit:cover;                 /* 模糊时铺满全屏（裁剪无妨，反正看不清） */
+    object-fit:cover;
     filter:blur(30px);
-    transform:scale(1.12);            /* 放大一点，避免模糊时边缘露出白边 */
-    transition:filter 1.2s ease, transform 1.2s ease;
+    transform:scale(1.12);
+    transition:opacity 1s ease;
   }
-  #bg.clear{
-    filter:blur(0);
-    object-fit:contain;               /* 变清晰后完整显示整张图，不裁剪 */
-    transform:scale(1);
+
+  /* 顶层：清晰、完整显示整张图（不裁剪），点击后淡入 */
+  #bg-clear{
+    position:fixed; inset:0;
+    width:100%; height:100%;
+    object-fit:contain;
+    opacity:0;
+    transition:opacity 1.2s ease;
   }
+  #bg-clear.show{ opacity:1; }
 
   /* 引导层：只显示“点击查看” */
   #overlay{
@@ -42,7 +47,8 @@
 </head>
 <body>
 
-<img id="bg" src="c43c29baf6c7b490dbd674472b50b114.jpg" alt="">
+<img id="bg-blur" src="c43c29baf6c7b490dbd674472b50b114.jpg" alt="">
+<img id="bg-clear" src="c43c29baf6c7b490dbd674472b50b114.jpg" alt="">
 <div id="overlay"><span>点击查看</span></div>
 <audio id="audio" preload="auto"></audio>
 
@@ -50,21 +56,13 @@
 (function(){
   'use strict';
 
-  const AUDIO = ["petal_20260919_155531.m4a"];
-
   const audio = document.getElementById('audio');
-  const bg = document.getElementById('bg');
+  const bgClear = document.getElementById('bg-clear');
   const overlay = document.getElementById('overlay');
 
-  if (AUDIO.length){
-    audio.volume = 1;
-    audio.src = encodeURI(AUDIO[0]);
-    // 单曲循环
-    audio.addEventListener('ended', function(){
-      audio.currentTime = 0;
-      audio.play().catch(function(){});
-    });
-  }
+  audio.volume = 1;
+  audio.src = 'petal.mp3';
+  audio.loop = true;                       // 单曲循环
 
   function play(){
     const p = audio.play();
@@ -74,7 +72,7 @@
   // 点击“点击查看”：背景变清晰 + 播放音乐
   overlay.addEventListener('click', function(){
     overlay.classList.add('hidden');
-    bg.classList.add('clear');
+    bgClear.classList.add('show');
     play();
   });
 })();
