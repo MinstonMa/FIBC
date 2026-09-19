@@ -6,175 +6,74 @@
 <title>哈三中商业精英社</title>
 <style>
   *{ box-sizing:border-box; }
-  html, body{
-    margin:0; padding:0;
-    height:100%; overflow:hidden;
-    background:#0d0b09;
-  }
-  body{ -webkit-font-smoothing:antialiased; }
+  html, body{ margin:0; padding:0; height:100%; overflow:hidden; background:#0d0b09; }
 
-  /* 全屏舞台 */
-  .stage{
+  /* 全屏背景图：初始高度模糊，点击后过渡到清晰 */
+  #bg{
     position:fixed; inset:0;
-    background:#0d0b09;
-  }
-
-  /* 每一张图都铺满全屏，不拉伸（cover 只裁剪不形变） */
-  .frame{
-    position:absolute; inset:0;
     width:100%; height:100%;
-    object-fit:contain;   /* 完整显示，不裁剪、不拉伸，自动适配手机/电脑 */
-    opacity:0;
-    transition:opacity 1.6s ease;
+    object-fit:cover;
+    filter:blur(30px);
+    transform:scale(1.12);            /* 放大一点，避免模糊时边缘露出白边 */
+    transition:filter 1.2s ease;
   }
-  .frame.active{ opacity:1; }
+  #bg.clear{ filter:blur(0); }
 
-  /* 极轻的暗角，增加层次又不影响观感 */
-  .stage::after{
-    content:"";
-    position:absolute; inset:0;
-    pointer-events:none;
-    background:radial-gradient(ellipse at center,
-      rgba(0,0,0,0) 62%,
-      rgba(0,0,0,.28) 100%);
-  }
-
-  /* 点击进入引导层：浏览器禁止无交互自动播放，需用户点一下开始 */
+  /* 引导层：只显示“点击查看” */
   #overlay{
     position:fixed; inset:0; z-index:10;
-    display:flex; flex-direction:column;
-    align-items:center; justify-content:center;
-    gap:16px;
-    background:rgba(13,11,9,.72);
-    backdrop-filter:blur(4px);
-    color:#e8e2d6;
-    font-family:system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
-    cursor:pointer;
-    user-select:none;
-    transition:opacity 1s ease;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; user-select:none;
+    transition:opacity .8s ease;
   }
   #overlay.hidden{ opacity:0; pointer-events:none; }
-  #overlay h1{
-    margin:0; font-size:30px; font-weight:600; letter-spacing:3px;
-  }
-  #overlay p{
-    margin:0; font-size:14px; letter-spacing:2px; opacity:.68;
+  #overlay span{
+    color:#fff;
+    font-size:22px;
+    letter-spacing:8px;
+    text-shadow:0 0 14px rgba(0,0,0,.7);
+    font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
   }
 </style>
 </head>
 <body>
 
-<div class="stage" id="stage"></div>
-<div id="overlay">
-  <h1>哈三中商业精英社</h1>
-  <p>点击进入 · 播放音乐</p>
-</div>
+<img id="bg" src="c43c29baf6c7b490dbd674472b50b114.jpg" alt="">
+<div id="overlay"><span>点击查看</span></div>
 <audio id="audio" preload="auto"></audio>
 
 <script>
-(function () {
+(function(){
   'use strict';
 
-  /* ============================================================
-     由扫描结果自动生成的文件清单（相对路径）
-     新增图片 / 音频到文件夹后，把文件名加进下面数组即可。
-     ============================================================ */
-  const IMAGES = [
-    "c43c29baf6c7b490dbd674472b50b114.jpg"
-  ];
-  const AUDIO = [
-    "petal_20260919_155531.m4a"
-  ];
+  const AUDIO = ["petal_20260919_155531.m4a"];
 
-  const stage = document.getElementById('stage');
   const audio = document.getElementById('audio');
-
-  /* ---------- 全屏图片（支持多张，自动淡入淡出轮播） ---------- */
-  let frames = [];
-  let cur = 0;
-
-  if (IMAGES.length){
-    frames = IMAGES.map((name) => {
-      const img = document.createElement('img');
-      img.className = 'frame';
-      img.src = encodeURI(name);
-      img.alt = name;
-      img.draggable = false;
-      stage.appendChild(img);
-      return img;
-    });
-    show(0);
-    if (IMAGES.length > 1){
-      setInterval(() => show((cur + 1) % IMAGES.length), 6000);
-    }
-  }
-
-  function show(i){
-    const prev = frames[cur];
-    const next = frames[i];
-    if (prev) prev.classList.remove('active');
-    cur = i;
-    next.classList.add('active');
-  }
-
-  /* ---------- 背景音乐：自动播放 + 静默回退 ---------- */
-  let trackIndex = 0;
-
-  function ensurePlay(){
-    const p = audio.play();
-    if (p) p.catch(() => {}); // 被拦截时静默，不报错、不弹窗
-  }
-
-  function playTrack(i){
-    trackIndex = i;
-    audio.src = encodeURI(AUDIO[i]);
-    ensurePlay();
-  }
-
-  function next(){
-    if (AUDIO.length > 1){
-      playTrack((trackIndex + 1) % AUDIO.length);
-    } else {
-      // 单曲循环
-      audio.currentTime = 0;
-      ensurePlay();
-    }
-  }
+  const bg = document.getElementById('bg');
+  const overlay = document.getElementById('overlay');
 
   if (AUDIO.length){
     audio.volume = 1;
-    audio.muted = false;
-    playTrack(0);
-
-    const overlay = document.getElementById('overlay');
-
-    /* 若浏览器允许自动播放，音频一开始播放就自动收起引导层 */
-    audio.addEventListener('playing', () => overlay.classList.add('hidden'));
-
-    /* 音频加载完成后若尚未播放，再尝试一次自动播放 */
-    audio.addEventListener('canplay', () => {
-      if (audio.paused) ensurePlay();
+    audio.src = encodeURI(AUDIO[0]);
+    // 单曲循环
+    audio.addEventListener('ended', function(){
+      audio.currentTime = 0;
+      audio.play().catch(function(){});
     });
-
-    audio.addEventListener('ended', next);
-
-    /* 浏览器普遍拦截无手势的自动播放：
-       显示引导层，用户在第一次点击 / 触摸 / 按键时开始播放并收起引导层。 */
-    const events = ['pointerdown', 'touchstart', 'keydown', 'click'];
-    function onGesture(){
-      overlay.classList.add('hidden');
-      if (audio.paused) ensurePlay();
-      events.forEach((ev) => document.removeEventListener(ev, onGesture));
-    }
-    events.forEach((ev) => document.addEventListener(ev, onGesture, { passive:true }));
   }
+
+  function play(){
+    const p = audio.play();
+    if (p) p.catch(function(){});
+  }
+
+  // 点击“点击查看”：背景变清晰 + 播放音乐
+  overlay.addEventListener('click', function(){
+    overlay.classList.add('hidden');
+    bg.classList.add('clear');
+    play();
+  });
 })();
 </script>
-
-<noscript>
-  <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;">
-    <img src="c43c29baf6c7b490dbd674472b50b114.jpg" alt="" style="width:100%;height:100%;object-fit:cover;">
-  </div>
-</noscript>
 </body>
 </html>
