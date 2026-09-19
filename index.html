@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>相册</title>
+<style>
+  *{ box-sizing:border-box; }
+  html, body{
+    margin:0; padding:0;
+    height:100%; overflow:hidden;
+    background:#0d0b09;
+  }
+  body{ -webkit-font-smoothing:antialiased; }
+
+  /* 全屏舞台 */
+  .stage{
+    position:fixed; inset:0;
+    background:#0d0b09;
+  }
+
+  /* 每一张图都铺满全屏，不拉伸（cover 只裁剪不形变） */
+  .frame{
+    position:absolute; inset:0;
+    width:100%; height:100%;
+    object-fit:contain;   /* 完整显示，不裁剪、不拉伸，自动适配手机/电脑 */
+    opacity:0;
+    transition:opacity 1.6s ease;
+  }
+  .frame.active{ opacity:1; }
+
+  /* 极轻的暗角，增加层次又不影响观感 */
+  .stage::after{
+    content:"";
+    position:absolute; inset:0;
+    pointer-events:none;
+    background:radial-gradient(ellipse at center,
+      rgba(0,0,0,0) 62%,
+      rgba(0,0,0,.28) 100%);
+  }
+</style>
+</head>
+<body>
+
+<div class="stage" id="stage"></div>
+<audio id="audio" preload="auto"></audio>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ============================================================
+     由扫描结果自动生成的文件清单（相对路径）
+     新增图片 / 音频到文件夹后，把文件名加进下面数组即可。
+     ============================================================ */
+  const IMAGES = [
+    "c43c29baf6c7b490dbd674472b50b114.jpg"
+  ];
+  const AUDIO = [
+    "petal_20260919_155531.m4a"
+  ];
+
+  const stage = document.getElementById('stage');
+  const audio = document.getElementById('audio');
+
+  /* ---------- 全屏图片（支持多张，自动淡入淡出轮播） ---------- */
+  let frames = [];
+  let cur = 0;
+
+  if (IMAGES.length){
+    frames = IMAGES.map((name) => {
+      const img = document.createElement('img');
+      img.className = 'frame';
+      img.src = encodeURI(name);
+      img.alt = name;
+      img.draggable = false;
+      stage.appendChild(img);
+      return img;
+    });
+    show(0);
+    if (IMAGES.length > 1){
+      setInterval(() => show((cur + 1) % IMAGES.length), 6000);
+    }
+  }
+
+  function show(i){
+    const prev = frames[cur];
+    const next = frames[i];
+    if (prev) prev.classList.remove('active');
+    cur = i;
+    next.classList.add('active');
+  }
+
+  /* ---------- 背景音乐：自动播放 + 静默回退 ---------- */
+  let trackIndex = 0;
+
+  function ensurePlay(){
+    const p = audio.play();
+    if (p) p.catch(() => {}); // 被拦截时静默，不报错、不弹窗
+  }
+
+  function playTrack(i){
+    trackIndex = i;
+    audio.src = encodeURI(AUDIO[i]);
+    ensurePlay();
+  }
+
+  function next(){
+    if (AUDIO.length > 1){
+      playTrack((trackIndex + 1) % AUDIO.length);
+    } else {
+      // 单曲循环
+      audio.currentTime = 0;
+      ensurePlay();
+    }
+  }
+
+  if (AUDIO.length){
+    audio.volume = 1;
+    audio.muted = false;
+    playTrack(0);
+
+    /* 音频加载完成后若尚未播放，再尝试一次自动播放 */
+    audio.addEventListener('canplay', () => {
+      if (audio.paused) ensurePlay();
+    });
+
+    audio.addEventListener('ended', next);
+
+    /* 浏览器普遍拦截无手势的自动播放：
+       页面加载先尝试一次；若被拦截，则在用户第一次
+       点击 / 触摸 / 按键 / 敲键盘时自动开始，全程不显示任何按钮。 */
+    const events = ['pointerdown', 'touchstart', 'keydown', 'click'];
+    function onGesture(){
+      if (audio.paused) ensurePlay();
+      events.forEach((ev) => document.removeEventListener(ev, onGesture));
+    }
+    events.forEach((ev) => document.addEventListener(ev, onGesture, { passive:true }));
+  }
+})();
+</script>
+
+<noscript>
+  <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;">
+    <img src="c43c29baf6c7b490dbd674472b50b114.jpg" alt="" style="width:100%;height:100%;object-fit:cover;">
+  </div>
+</noscript>
+</body>
+</html>
